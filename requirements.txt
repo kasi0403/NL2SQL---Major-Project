@@ -5,8 +5,8 @@ snowflake-connector-python
 python-dotenv
 pydantic
 
-crewai
+crewai[google-genai]
 langchain
 chromadb
-google-generativeai
 sentence-transformers
+tf-keras
