@@ -1,0 +1,12 @@
+sqlalchemy
+psycopg2-binary
+pymysql
+snowflake-connector-python
+python-dotenv
+pydantic
+
+crewai
+langchain
+chromadb
+google-generativeai
+sentence-transformers
