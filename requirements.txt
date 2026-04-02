@@ -10,3 +10,5 @@ langchain
 chromadb
 sentence-transformers
 tf-keras
+
+google-genai
