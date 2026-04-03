@@ -74,6 +74,7 @@ Database Schema:
 Rules:
 - Use only tables and columns from the schema.
 - Always use JOINs using foreign keys when needed.
+- When merging two tables via JOIN, you MUST explicitly select and preserve the exact order of columns from both tables as defined in the schema.
 - Do not guess column names.
 - Return ONLY raw SQL.
 - Output must start with SELECT.

@@ -10,6 +10,9 @@ from services.insight_service import generate_insights
 from context.schema_context import get_schema_context
 
 app = Flask(__name__)
+app.config['JSON_SORT_KEYS'] = False
+if hasattr(app, 'json'):
+    app.json.sort_keys = False
 CORS(app)
 
 @app.route('/api/connect', methods=['POST'])
