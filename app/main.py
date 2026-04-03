@@ -6,6 +6,8 @@ import active_db
 import re
 from vectorstore.chroma_store import ingest_schema
 from services.nl2sql_service import generate_sql
+from services.insight_service import generate_insights
+from context.schema_context import get_schema_context
 
 app = Flask(__name__)
 CORS(app)
@@ -75,10 +77,17 @@ def query_db():
         # Execute query
         results = active_db.active_connector.execute_query(sql)
 
+        schema_context = get_schema_context(user_query)
+        insights_data = generate_insights(user_query, sql, results, schema_context)
+
         return jsonify({
             "success": True,
             "sql": sql,
-            "results": results
+            "results": results,
+            "insights": insights_data.get("insights", []),
+            "anomalies": insights_data.get("anomalies", []),
+            "charts": insights_data.get("charts", []),
+            "follow_ups": insights_data.get("follow_ups", [])
         })
 
     except Exception as e:

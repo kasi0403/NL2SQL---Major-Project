@@ -165,15 +165,21 @@
   display: grid;
   grid-template-columns: repeat(auto-fill, minmax(350px, 1fr));
   gap: 1.5rem;
-  align-items: flex-start;
+  align-items: stretch;
 }
 
 .desc-card {
-  background: rgba(0,0,0,0.2);
+  background: rgba(22, 27, 34, 0.4);
+  backdrop-filter: blur(8px);
   border: 1px solid var(--border-color);
-  border-radius: 8px;
+  border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 4px 15px rgba(0,0,0,0.2);
+  min-width: 0;
+  max-width: 100%;
+  height: 380px; 
+  display: flex;
+  flex-direction: column;
 }
 
 .desc-header {
@@ -188,7 +194,20 @@
 }
 
 .desc-table-wrap {
-  overflow-x: auto;
+  flex: 1;
+  overflow: auto;
+}
+
+.desc-table-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.desc-table-wrap::-webkit-scrollbar-thumb {
+  background: rgba(255,255,255,0.1); 
+  border-radius: 3px;
+}
+.desc-table-wrap::-webkit-scrollbar-thumb:hover {
+  background: rgba(255,255,255,0.2); 
 }
 
 .desc-table {
@@ -206,7 +225,12 @@
 .desc-table th {
   color: var(--text-secondary);
   font-weight: 500;
-  background: rgba(0,0,0,0.3);
+  background: rgba(255,255,255,0.03);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  backdrop-filter: blur(4px);
+  box-shadow: 0 1px 0 rgba(255,255,255,0.05);
 }
 
 .field-name {
