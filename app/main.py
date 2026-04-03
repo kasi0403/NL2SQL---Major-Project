@@ -75,10 +75,19 @@ def query_db():
         # Execute query
         results = active_db.active_connector.execute_query(sql)
 
+        # Generate Insights (Charts, Summary, Anomalies, Follow-ups)
+        insights_data = {}
+        try:
+            from services.insights_service import generate_insights
+            insights_data = generate_insights(user_query, sql, results)
+        except Exception as e:
+            print("Insights error:", e)
+
         return jsonify({
             "success": True,
             "sql": sql,
-            "results": results
+            "results": results,
+            "insights": insights_data
         })
 
     except Exception as e:

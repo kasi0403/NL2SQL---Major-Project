@@ -2,7 +2,12 @@ import { useState, useRef, useEffect, useCallback } from 'react';
 import axios from 'axios';
 import ReactFlow, { Background, Controls, MarkerType, useNodesState, useEdgesState, addEdge } from 'reactflow';
 import 'reactflow/dist/style.css';
-import { Database, Send, AlertTriangle, CheckCircle2, Table as TableIcon, Share2, MessageSquare, Activity, TerminalSquare, AlertCircle, Key, Link as LinkIcon } from 'lucide-react';
+import { Database, Send, AlertTriangle, CheckCircle2, Table as TableIcon, Share2, MessageSquare, Activity, TerminalSquare, AlertCircle, Key, Link as LinkIcon, Download, FileText, BarChart2, PieChart as PieChartIcon } from 'lucide-react';
+import { BarChart, Bar, LineChart, Line, PieChart, Pie, Cell, XAxis, YAxis, CartesianGrid, Tooltip as RechartsTooltip, Legend, ResponsiveContainer } from 'recharts';
+import jsPDF from 'jspdf';
+import autoTable from 'jspdf-autotable';
+import html2canvas from 'html2canvas';
+import Tree from 'react-d3-tree';
 import './App.css';
 
 function SchemaDiagram({ schema }) {
@@ -115,6 +120,72 @@ function App() {
     }
   }, [messages, activeTab]);
 
+  const exportToCSV = (results, query) => {
+    if (!results || results.length === 0) return;
+    const headers = Object.keys(results[0]).join(',');
+    const rows = results.map(row => Object.values(row).map(val => `"${val}"`).join(',')).join('\n');
+    const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + rows;
+    const encodedUri = encodeURI(csvContent);
+    const link = document.createElement("a");
+    link.setAttribute("href", encodedUri);
+    link.setAttribute("download", `export_${query.replace(/\s+/g, '_')}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
+
+  const exportToPDF = (results, query) => {
+    if (!results || results.length === 0) return;
+    const doc = new jsPDF();
+    doc.text(`Query: ${query}`, 14, 15);
+    autoTable(doc, {
+      head: [Object.keys(results[0])],
+      body: results.map(row => Object.values(row)),
+      startY: 20
+    });
+    doc.save(`export_${query.replace(/\s+/g, '_')}.pdf`);
+  };
+
+  const exportDashboard = async (elementId, query) => {
+    const element = document.getElementById(elementId);
+    if (!element) return;
+    const canvas = await html2canvas(element);
+    const data = canvas.toDataURL('image/png');
+    const link = document.createElement('a');
+    link.href = data;
+    link.download = `dashboard_${query.replace(/\s+/g, '_')}.png`;
+    link.click();
+  };
+
+  const buildTreeData = (data, idCol, parentCol, labelCol) => {
+    if (!data || data.length === 0) return { name: 'No Data' };
+    const map = {};
+    const roots = [];
+    
+    // First pass: create node objects
+    data.forEach(item => {
+      const id = item[idCol];
+      map[id] = { 
+        name: String(item[labelCol] || id || 'Unknown'), 
+        attributes: { id: String(id) }, 
+        children: [] 
+      };
+    });
+    
+    // Second pass: link parents to children
+    data.forEach(item => {
+      const id = item[idCol];
+      const parentId = item[parentCol];
+      if (parentId && map[parentId]) {
+        map[parentId].children.push(map[id]);
+      } else {
+        roots.push(map[id]);
+      }
+    });
+    
+    return roots.length > 0 ? roots[0] : { name: 'Root' };
+  };
+
   const handleConnect = async (e) => {
     e.preventDefault();
     if (!dbUrl) return;
@@ -153,6 +224,8 @@ function App() {
           type: 'ai', 
           sql: response.data.sql,
           results: response.data.results,
+          insights: response.data.insights || {},
+          queryText: userMessage,
           text: 'Here is the result of your query:' 
         }]);
       } else {
@@ -292,21 +365,127 @@ function App() {
                           )}
                           
                           {msg.results && msg.results.length > 0 && (
-                            <div className="table-responsive">
-                              <table className="data-table">
-                                <thead>
-                                  <tr>
-                                    {Object.keys(msg.results[0]).map((k) => <th key={k}>{k}</th>)}
-                                  </tr>
-                                </thead>
-                                <tbody>
-                                  {msg.results.map((row, i) => (
-                                    <tr key={i}>
-                                      {Object.values(row).map((v, j) => <td key={j}>{String(v)}</td>)}
+                            <div id={`dashboard-export-${idx}`} className="dashboard-container" style={{background: 'var(--bg-color)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border-color)', marginTop: '10px'}}>
+                              <div className="table-responsive" style={{maxHeight: '300px', overflowY: 'auto'}}>
+                                <table className="data-table">
+                                  <thead>
+                                    <tr>
+                                      {Object.keys(msg.results[0]).map((k) => <th key={k}>{k}</th>)}
                                     </tr>
+                                  </thead>
+                                  <tbody>
+                                    {msg.results.map((row, i) => (
+                                      <tr key={i}>
+                                        {Object.values(row).map((v, j) => <td key={j}>{String(v)}</td>)}
+                                      </tr>
+                                    ))}
+                                  </tbody>
+                                </table>
+                              </div>
+
+                              {msg.insights && msg.insights.insights && msg.insights.insights.length > 0 && (
+                                <div className="smart-insights" style={{marginTop: '20px', padding: '15px', background: 'rgba(88, 166, 255, 0.1)', borderRadius: '8px', borderLeft: '4px solid var(--primary)'}}>
+                                  <h4 style={{display:'flex', alignItems:'center', gap:'8px', marginBottom: '10px', color: 'var(--primary)'}}>
+                                    <Activity size={18}/> Smart Summary & Anomalies
+                                  </h4>
+                                  <ul style={{paddingLeft: '20px', margin: 0, color: 'var(--text-secondary)'}}>
+                                    {msg.insights.insights.map((ins, i) => <li key={i} style={{marginBottom: '5px'}}>{ins}</li>)}
+                                  </ul>
+                                </div>
+                              )}
+
+                              {msg.insights && msg.insights.charts && msg.insights.charts.length > 0 && (
+                                <div className="charts-grid" style={{
+                                    display: 'grid', 
+                                    gridTemplateColumns: msg.insights.charts.length > 1 ? '1fr 1fr' : '1fr', 
+                                    gap: '20px', 
+                                    marginTop: '20px'
+                                }}>
+                                  {msg.insights.charts.map((chart, cIdx) => (
+                                    <div key={cIdx} className="chart-wrapper" style={{background: 'var(--bg-dark)', padding: '15px', borderRadius: '8px', border: '1px solid var(--border-color)'}}>
+                                      <h5 style={{textAlign: 'center', marginBottom: '15px', color: 'var(--text-primary)'}}>{chart.title}</h5>
+                                      <ResponsiveContainer width="100%" height={250}>
+                                        {chart.type === 'line' ? (
+                                          <LineChart data={msg.results}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                                            <XAxis dataKey={chart.x_axis} stroke="#ccc"/>
+                                            <YAxis stroke="#ccc"/>
+                                            <RechartsTooltip contentStyle={{backgroundColor: '#222', borderColor: '#444'}}/>
+                                            <Legend />
+                                            <Line type="monotone" dataKey={chart.y_axis} stroke="#58a6ff" strokeWidth={3} dot={{r: 4}} activeDot={{r: 6}}/>
+                                          </LineChart>
+                                        ) : chart.type === 'tree' ? (
+                                          <div style={{width: '100%', height: '100%', minHeight: '250px'}}>
+                                             <Tree 
+                                               data={buildTreeData(msg.results, chart.id_col, chart.parent_col, chart.label_col)} 
+                                               orientation="vertical"
+                                               pathFunc="step"
+                                               translate={{x: 200, y: 30}}
+                                               nodeSize={{x: 120, y: 60}}
+                                               renderCustomNodeElement={({ nodeDatum }) => (
+                                                 <g>
+                                                   <rect width="100" height="40" x="-50" y="-20" fill="var(--bg-color)" stroke="var(--primary)" strokeWidth="1" rx="5"/>
+                                                   <text fill="var(--text-primary)" strokeWidth="0" x="0" y="0" dominantBaseline="middle" textAnchor="middle" fontSize="12">
+                                                     {nodeDatum.name.substring(0, 15)}
+                                                   </text>
+                                                 </g>
+                                               )}
+                                             />
+                                           </div>
+                                        ) : chart.type === 'pie' ? (
+                                          <PieChart>
+                                            <Pie data={msg.results} dataKey={chart.y_axis} nameKey={chart.x_axis} cx="50%" cy="50%" outerRadius={80} fill="#82ca9d" label>
+                                              {msg.results.map((entry, index) => (
+                                                  <Cell key={`cell-${index}`} fill={['#58a6ff', '#3fb950', '#d29922', '#f85149', '#8957e5', '#2fdaee'][index % 6]} />
+                                              ))}
+                                            </Pie>
+                                            <RechartsTooltip contentStyle={{backgroundColor: '#222', borderColor: '#444'}}/>
+                                            <Legend />
+                                          </PieChart>
+                                        ) : (
+                                          <BarChart data={msg.results}>
+                                            <CartesianGrid strokeDasharray="3 3" stroke="#444" />
+                                            <XAxis dataKey={chart.x_axis} stroke="#ccc"/>
+                                            <YAxis stroke="#ccc"/>
+                                            <RechartsTooltip contentStyle={{backgroundColor: '#222', borderColor: '#444'}}/>
+                                            <Legend />
+                                            <Bar dataKey={chart.y_axis} fill="#58a6ff" radius={[4, 4, 0, 0]} />
+                                          </BarChart>
+                                        )}
+                                      </ResponsiveContainer>
+                                    </div>
                                   ))}
-                                </tbody>
-                              </table>
+                                </div>
+                              )}
+                            </div>
+                          )}
+
+                          {msg.results && msg.results.length > 0 && (
+                            <div className="export-toolbar" style={{display: 'flex', gap: '10px', marginTop: '15px'}}>
+                              <button className="btn outline" onClick={() => exportToCSV(msg.results, msg.queryText || 'query')} style={{padding: '6px 12px', fontSize: '13px'}}>
+                                <FileText size={14}/> CSV
+                              </button>
+                              <button className="btn outline" onClick={() => exportToPDF(msg.results, msg.queryText || 'query')} style={{padding: '6px 12px', fontSize: '13px'}}>
+                                <Download size={14}/> PDF
+                              </button>
+                              <button className="btn outline" onClick={() => exportDashboard(`dashboard-export-${idx}`, msg.queryText || 'query')} style={{padding: '6px 12px', fontSize: '13px'}}>
+                                <BarChart2 size={14}/> Export Dashboard
+                              </button>
+                            </div>
+                          )}
+
+                          {msg.insights && msg.insights.follow_up_questions && msg.insights.follow_up_questions.length > 0 && (
+                            <div className="follow-ups" style={{marginTop: '20px'}}>
+                              <p style={{fontSize: '13px', color: 'var(--text-secondary)', marginBottom: '8px'}}>Suggested Follow-ups:</p>
+                              <div style={{display: 'flex', gap: '10px', flexWrap: 'wrap'}}>
+                                {msg.insights.follow_up_questions.map((q, i) => (
+                                  <button key={i} className="follow-up-btn" onClick={() => {
+                                    setChatInput(q);
+                                  }} style={{background: 'var(--bg-dark)', border: '1px solid var(--border-color)', padding: '8px 12px', borderRadius: '20px', color: 'var(--accent)', cursor: 'pointer', fontSize: '13px', transition: 'all 0.2s'}}>
+                                    💬 {q}
+                                  </button>
+                                ))}
+                              </div>
                             </div>
                           )}
                           
