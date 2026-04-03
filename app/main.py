@@ -1,41 +1,88 @@
-# STAGE -1: Initial setup and testing of database connection
-# from connectors.postgres_connector import PostgresConnector
-# from config.db_config import DB_CONFIG
-
-# def main():
-#     connector = PostgresConnector(DB_CONFIG["postgres"])
-
-#     print("Testing connection...")
-#     print(connector.test_connection())
-
-#     print("\nSchema:")
-#     schema = connector.get_schema()
-#     print(schema)
-
-#     print("\nQuery Result:")
-#     result = connector.execute_query("SELECT * FROM employees LIMIT 1;")
-#     print(result)
-
-# if __name__ == "__main__":
-#     main()
-
-# STAGE 2: Basic NL2SQL pipeline with fixed SQL query
-from services.nl2sql_service import generate_sql
+from flask import Flask, request, jsonify
+from flask_cors import CORS
 from connectors.postgres_connector import PostgresConnector
-from config.db_config import DB_CONFIG
+from connectors.mysql_connector import MySQLConnector
+import active_db
+import re
+from vectorstore.chroma_store import ingest_schema
+from services.nl2sql_service import generate_sql
 
-def main():
-    connector = PostgresConnector(DB_CONFIG["postgres"])
+app = Flask(__name__)
+CORS(app)
 
-    while True:
-        user_query = input("\nAsk a question: ")
+@app.route('/api/connect', methods=['POST'])
+def connect_db():
+    data = request.json
+    url = data.get('url')
+    if not url:
+        return jsonify({"success": False, "error": "No URL provided"}), 400
+
+    try:
+        # Regex to check database type
+        if re.match(r"^postgresql(\+psycopg2)?://", url):
+            connector = PostgresConnector(url)
+            db_type = "PostgreSQL"
+        elif re.match(r"^mysql(\+pymysql)?://", url):
+            # SQLAlchemy needs mysql+pymysql:// if dialect is default
+            if url.startswith("mysql://"):
+                url = url.replace("mysql://", "mysql+pymysql://", 1)
+            connector = MySQLConnector(url)
+            db_type = "MySQL"
+        else:
+            return jsonify({"success": False, "error": "Unsupported database type. URL must start with postgresql:// or mysql://"}), 400
+
+        # Test connection
+        test_res = connector.test_connection()
+        if test_res is not True:
+            return jsonify({"success": False, "error": f"Connection failed: {test_res}"}), 400
+
+        # Retrieve Schema
+        schema = connector.get_schema()
         
-        sql = generate_sql(user_query)
-        print("\nGenerated SQL:", sql)
+        # Make the connector globally active for the queries
+        active_db.active_connector = connector
 
-        if "Failed" not in sql:
-            result = connector.execute_query(sql)
-            print("\nResult:", result)
+        # Ingest schema into Chroma
+        ingest_schema(schema)
+
+        return jsonify({
+            "success": True, 
+            "db_type": db_type,
+            "schema": schema,
+            "message": f"Successfully connected to {db_type}."
+        })
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e)}), 500
+
+
+@app.route('/api/query', methods=['POST'])
+def query_db():
+    data = request.json
+    user_query = data.get('query')
+
+    if not user_query:
+        return jsonify({"success": False, "error": "No query provided"}), 400
+
+    if not active_db.active_connector:
+        return jsonify({"success": False, "error": "No active database connection"}), 400
+
+    try:
+        sql = generate_sql(user_query)
+
+        if sql.startswith("Failed"):
+            return jsonify({"success": False, "error": sql, "sql": None, "results": None})
+
+        # Execute query
+        results = active_db.active_connector.execute_query(sql)
+
+        return jsonify({
+            "success": True,
+            "sql": sql,
+            "results": results
+        })
+
+    except Exception as e:
+        return jsonify({"success": False, "error": str(e), "sql": None, "results": None})
 
 if __name__ == "__main__":
-    main()
+    app.run(port=5000, debug=True)

@@ -1,7 +1,4 @@
-from connectors.postgres_connector import PostgresConnector
-from config.db_config import DB_CONFIG
-
-connector = PostgresConnector(DB_CONFIG["postgres"])
+import active_db
 
 def validate_sql(query: str):
     """
@@ -9,7 +6,7 @@ def validate_sql(query: str):
     """
     try:
         test_query = f"EXPLAIN {query}"
-        connector.execute_query(test_query)
+        active_db.active_connector.execute_query(test_query)
         return True, "SQL is valid"
     except Exception as e:
-        return False, str(e)
+        return False, str(e)

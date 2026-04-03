@@ -18,14 +18,32 @@ class PostgresConnector(DatabaseConnector):
         schema = {}
 
         for table in inspector.get_table_names():
+            # Get Primary Key
+            pk_info = inspector.get_pk_constraint(table)
+            pk_cols = pk_info.get("constrained_columns", []) if pk_info else []
+
             columns = []
             for column in inspector.get_columns(table):
                 columns.append({
                     "name": column["name"],
-                    "type": str(column["type"])
+                    "type": str(column["type"]),
+                    "is_pk": column["name"] in pk_cols,
+                    "nullable": column.get("nullable", True)
                 })
             
-            schema[table] = columns
+            fks = []
+            for fk in inspector.get_foreign_keys(table):
+                fks.append({
+                    "constrained_columns": fk["constrained_columns"],
+                    "referred_table": fk["referred_table"],
+                    "referred_columns": fk["referred_columns"]
+                })
+            
+            schema[table] = {
+                "columns": columns,
+                "foreign_keys": fks,
+                "primary_keys": pk_cols
+            }
 
         return schema
 
