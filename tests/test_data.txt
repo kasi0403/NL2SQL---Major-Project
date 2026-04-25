@@ -1,0 +1,62 @@
+show all departments and their locations
+list all employees earning more than $80,000
+how many active projects do we have right now?
+show the average salary by department
+list employees working on the alpha project
+which department has the most employees?
+who are the top 5 employees by total hours worked?
+compare total salary expenses across different locations
+identify employees who are working on 2 or more projects simultaneously
+show the month-over-month hiring trend over the last year
+list all employees in the sales department
+show the emails of all employees
+how many departments do we have?
+list all projects starting this month
+who is the manager of the hr department?
+show the locations of all offices
+list employees hired in 2023
+what is the total number of employees?
+show projects that ended last year
+list all employee names and their hire dates
+show the total salary expense for the marketing department
+list all projects without an end date
+which department has the lowest average salary?
+show the number of projects per department
+who are the managers with the most direct reports?
+list employees who earn less than their department average
+how many hours have been logged across all projects?
+show the average hours worked per project
+list the top 3 longest running projects
+which project has the most team members?
+show the distribution of employee roles in projects
+list employees who have not been assigned to any project
+show the total number of hours worked by the engineering team
+compare the average salary of employees with and without projects
+what is the total budget implication of active projects?
+calculate the utilization rate of each employee
+identify departments with the highest project turnover rate
+show the month-over-month growth in total payroll expense
+identify projects that are at risk of missing their deadlines
+compare the average tenure of employees across different departments
+which manager oversees the highest total salary expense?
+show the correlation between salary and hours worked on projects
+identify employees whose salaries are in the top 10% but have 0 project hours
+calculate the cost per project based on employee salaries and hours
+predict the future hiring needs for the next quarter
+identify anomalies in hours logged vs project duration
+which location is the most cost-effective in terms of salary?
+show the historical trend of project completion times
+identify potential bottlenecks in multiple projects
+calculate the roi of each department based on project completion
+rank departments by number of employees
+rank employees by their salary
+rank projects by their duration
+rank departments by average employee salary
+rank employees by total hours worked across all projects
+rank projects by the number of employees assigned to them
+rank locations by total number of active projects
+rank managers by the total number of hours logged by their team
+rank departments by cost-efficiency
+rank employees by their utilization rate
+rank the top 3 highest paid employees who have no active projects
+rank locations by total salary expense

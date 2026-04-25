@@ -9,6 +9,7 @@ import jsPDF from 'jspdf';
 import autoTable from 'jspdf-autotable';
 import * as XLSX from 'xlsx';
 import './App.css';
+import { mockQueries, mockConnectionResponse, mockResponses } from './mockData';
 
 const COLORS = ['#8884d8', '#82ca9d', '#ffc658', '#ff8042', '#0088FE', '#00C49F', '#FFBB28', '#FF8042'];
 
@@ -170,7 +171,11 @@ function App() {
 
   const [chatInput, setChatInput] = useState('');
   const [messages, setMessages] = useState([
-    { type: 'ai', text: 'Hello! I am your Database Multi-Agent. You can ask me anything about your data.' }
+    { 
+      type: 'ai', 
+      text: 'Hello! I am your Database Multi-Agent. You can ask me anything about your data.',
+      follow_ups: mockQueries.slice(0, 3) 
+    }
   ]);
   const [isQuerying, setIsQuerying] = useState(false);
 
@@ -355,28 +360,29 @@ function App() {
     setMessages(prev => [...prev, { type: 'user', text: userMessage }]);
     setIsQuerying(true);
 
-    try {
-      const response = await axios.post('http://127.0.0.1:5000/api/query', { query: userMessage });
+    setTimeout(() => {
+      const lowerQuery = userMessage.toLowerCase().trim();
+      const mockRes = mockResponses[lowerQuery];
 
-      if (response.data.success) {
+      if (mockRes) {
         setMessages(prev => [...prev, {
           type: 'ai',
-          sql: response.data.sql,
-          results: response.data.results,
-          insights: response.data.insights,
-          anomalies: response.data.anomalies,
-          charts: response.data.charts,
-          follow_ups: response.data.follow_ups,
+          sql: mockRes.sql,
+          results: mockRes.results,
+          insights: mockRes.insights,
+          anomalies: mockRes.anomalies,
+          charts: mockRes.charts,
+          follow_ups: mockRes.follow_ups,
           text: 'Here is the analysis based on your query:'
         }]);
       } else {
-        setMessages(prev => [...prev, { type: 'error', text: response.data.error }]);
+        setMessages(prev => [...prev, { 
+          type: 'error', 
+          text: "Mock API: Query not recognized. Please select a suggested question or type one of the predefined queries."
+        }]);
       }
-    } catch (err) {
-      setMessages(prev => [...prev, { type: 'error', text: err.response?.data?.error || err.message }]);
-    } finally {
       setIsQuerying(false);
-    }
+    }, 4500);
   };
 
   return (
