@@ -1,6 +1,6 @@
 import json
 from crewai import Agent
-from llm.gemini_client import get_gemini_model
+from llm.ai_bot import get_ai_bot
 
 insight_agent = Agent(
     role="Data Analyst and Business Intelligence Expert",
@@ -20,5 +20,5 @@ insight_agent = Agent(
     ),
     verbose=True,
     allow_delegation=False,
-    llm=get_gemini_model()
+    llm=get_ai_bot()
 )

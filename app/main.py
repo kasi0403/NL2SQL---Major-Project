@@ -1,4 +1,4 @@
-from flask import Flask, request, jsonify
+from flask import Flask, request, jsonify, Response, stream_with_context
 from flask_cors import CORS
 from connectors.postgres_connector import PostgresConnector
 from connectors.mysql_connector import MySQLConnector
@@ -8,6 +8,7 @@ from vectorstore.chroma_store import ingest_schema
 from services.nl2sql_service import generate_sql
 from services.insight_service import generate_insights
 from context.schema_context import get_schema_context
+from services.log_streamer import log_streamer
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
@@ -75,6 +76,7 @@ def query_db():
         sql = generate_sql(user_query)
 
         if sql.startswith("Failed"):
+            log_streamer.push("[DONE]")
             return jsonify({"success": False, "error": sql, "sql": None, "results": None})
 
         # Execute query
@@ -83,6 +85,7 @@ def query_db():
         schema_context = get_schema_context(user_query)
         insights_data = generate_insights(user_query, sql, results, schema_context)
 
+        log_streamer.push("[DONE]")
         return jsonify({
             "success": True,
             "sql": sql,
@@ -94,7 +97,26 @@ def query_db():
         })
 
     except Exception as e:
+        log_streamer.push("[DONE]")
         return jsonify({"success": False, "error": str(e), "sql": None, "results": None})
 
+@app.route('/api/stream-thoughts', methods=['GET'])
+def stream_thoughts():
+    def generate():
+        q = log_streamer.listen()
+        try:
+            while True:
+                message = q.get()
+                if message == "[DONE]":
+                    yield "data: [DONE]\n\n"
+                    break
+                # Replace newlines in message to not break SSE format
+                safe_msg = str(message).replace("\n", " ")
+                yield f"data: {safe_msg}\n\n"
+        finally:
+            log_streamer.remove_listener(q)
+
+    return Response(stream_with_context(generate()), mimetype='text/event-stream')
+
 if __name__ == "__main__":
-    app.run(port=5000, debug=True)
+    app.run(host='0.0.0.0', port=5000, debug=True)

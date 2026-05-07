@@ -1,5 +1,5 @@
 from crewai import Agent
-from llm.gemini_client import get_gemini_model
+from llm.ai_bot import get_ai_bot
 
 validator_agent = Agent(
     role="SQL Validator and Schema Checker",
@@ -27,5 +27,5 @@ validator_agent = Agent(
     ),
     verbose=True,
     allow_delegation=False,
-    llm=get_gemini_model()
+    llm=get_ai_bot()
 )

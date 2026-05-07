@@ -4,6 +4,22 @@ from agents.correction_agent import correction_agent
 from agents.validator_agent import validator_agent
 from context.schema_context import get_schema_context
 from tools.sql_tools import validate_sql
+from services.log_streamer import log_streamer
+
+def my_step_callback(step):
+    try:
+        # Check if it's a tuple of (AgentAction, text)
+        if isinstance(step, tuple) and len(step) > 0:
+            log_str = str(step[0])
+        else:
+            log_str = str(step)
+        
+        # Clean up some common CrewAI log clutter if present
+        log_str = log_str.replace('\n', ' ')
+        log_streamer.push(f"Agent Thought: {log_str[:500]}...")
+    except Exception:
+        log_streamer.push("Agent is thinking...")
+
 
 MAX_RETRIES = 5
 
@@ -93,7 +109,8 @@ User Question:
             crew = Crew(
                 agents=[nl2sql_agent],
                 tasks=[task],
-                verbose=True
+                verbose=True,
+                step_callback=my_step_callback
             )
 
         # NEXT ATTEMPTS → CORRECTION AGENT
@@ -123,7 +140,8 @@ Return ONLY corrected SQL query.
             crew = Crew(
                 agents=[correction_agent],
                 tasks=[task],
-                verbose=True
+                verbose=True,
+                step_callback=my_step_callback
             )
 
         # Run CrewAI

@@ -173,6 +173,8 @@ function App() {
     { type: 'ai', text: 'Hello! I am your Database Multi-Agent. You can ask me anything about your data.' }
   ]);
   const [isQuerying, setIsQuerying] = useState(false);
+  const [currentThoughts, setCurrentThoughts] = useState([]);
+  const thoughtsRef = useRef([]);
 
   const messagesEndRef = useRef(null);
 
@@ -354,6 +356,23 @@ function App() {
     setChatInput('');
     setMessages(prev => [...prev, { type: 'user', text: userMessage }]);
     setIsQuerying(true);
+    setCurrentThoughts([]);
+    thoughtsRef.current = [];
+
+    const eventSource = new EventSource('http://127.0.0.1:5000/api/stream-thoughts');
+    eventSource.onmessage = (event) => {
+      if (event.data === "[DONE]") {
+        eventSource.close();
+      } else {
+        setCurrentThoughts(prev => {
+          const newThoughts = [...prev, event.data];
+          thoughtsRef.current = newThoughts;
+          return newThoughts;
+        });
+        scrollToBottom();
+      }
+    };
+    eventSource.onerror = () => eventSource.close();
 
     try {
       const response = await axios.post('http://127.0.0.1:5000/api/query', { query: userMessage });
@@ -367,15 +386,17 @@ function App() {
           anomalies: response.data.anomalies,
           charts: response.data.charts,
           follow_ups: response.data.follow_ups,
+          thoughts: thoughtsRef.current,
           text: 'Here is the analysis based on your query:'
         }]);
       } else {
-        setMessages(prev => [...prev, { type: 'error', text: response.data.error }]);
+        setMessages(prev => [...prev, { type: 'error', text: response.data.error, thoughts: thoughtsRef.current }]);
       }
     } catch (err) {
-      setMessages(prev => [...prev, { type: 'error', text: err.response?.data?.error || err.message }]);
+      setMessages(prev => [...prev, { type: 'error', text: err.response?.data?.error || err.message, thoughts: thoughtsRef.current }]);
     } finally {
       setIsQuerying(false);
+      if(eventSource.readyState !== 2) eventSource.close();
     }
   };
 
@@ -500,6 +521,22 @@ function App() {
                       ) : (
                         <>
                           <div className="msg-text">{msg.text}</div>
+                          
+                          {msg.thoughts && msg.thoughts.length > 0 && (
+                            <details style={{ background: '#1e1e1e', padding: '10px', borderRadius: '6px', margin: '10px 0', border: '1px solid #333' }}>
+                              <summary style={{ cursor: 'pointer', color: '#888', fontSize: '12px', outline: 'none' }}>
+                                View Agent Thought Process ({msg.thoughts.length} steps)
+                              </summary>
+                              <div style={{ marginTop: '10px', fontFamily: 'monospace', fontSize: '12px', color: '#bbb', maxHeight: '150px', overflowY: 'auto' }}>
+                                {msg.thoughts.map((t, idx) => (
+                                  <div key={idx} style={{ marginBottom: '4px', borderBottom: '1px solid #333', paddingBottom: '4px' }}>
+                                    <span style={{ color: '#58a6ff' }}>[{idx + 1}]</span> {t}
+                                  </div>
+                                ))}
+                              </div>
+                            </details>
+                          )}
+
                           {msg.sql && (
                             <div className="sql-result">
                               <span className="sql-badge">Generated SQL</span>
@@ -580,7 +617,23 @@ function App() {
                   ))}
                   {isQuerying && (
                     <div className="chat-bubble ai">
-                      <span className="loading-dots">Agents are analyzing schema and generating SQL</span>
+                      <span className="loading-dots" style={{ marginBottom: '10px', display: 'inline-block' }}>Agents are analyzing schema and generating SQL</span>
+                      
+                      {currentThoughts.length > 0 && (
+                        <div style={{ background: '#0d1117', padding: '10px', borderRadius: '6px', border: '1px solid #30363d', marginTop: '10px', width: '100%' }}>
+                           <div style={{ fontSize: '11px', color: '#8b949e', marginBottom: '8px', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                             <Activity size={12} style={{ display: 'inline', marginRight: '4px' }}/> Live Execution Logs
+                           </div>
+                           <div style={{ fontFamily: 'monospace', fontSize: '12px', color: '#c9d1d9', maxHeight: '150px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '6px' }}>
+                             {currentThoughts.map((t, idx) => (
+                               <div key={idx} style={{ paddingLeft: '8px', borderLeft: '2px solid #58a6ff', opacity: idx === currentThoughts.length - 1 ? 1 : 0.6 }}>
+                                 {t}
+                               </div>
+                             ))}
+                             <div ref={(el) => { el?.scrollIntoView(); }} />
+                           </div>
+                        </div>
+                      )}
                     </div>
                   )}
                   <div ref={messagesEndRef} />

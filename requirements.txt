@@ -5,12 +5,12 @@ snowflake-connector-python
 python-dotenv
 pydantic
 
-crewai[google-genai]
+crewai
 langchain
 chromadb
 sentence-transformers
 tf-keras
 
-google-genai
 flask
 flask-cors
+litellm

@@ -1,5 +1,5 @@
 from crewai import Agent
-from llm.gemini_client import get_gemini_model
+from llm.ai_bot import get_ai_bot
 
 correction_agent = Agent(
     role="Senior SQL Debugger",
@@ -31,5 +31,5 @@ correction_agent = Agent(
     ),
     verbose=True,
     allow_delegation=False,
-    llm=get_gemini_model()
+    llm=get_ai_bot()
 )
