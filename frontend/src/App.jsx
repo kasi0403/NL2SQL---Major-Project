@@ -85,7 +85,8 @@ function SchemaDiagram({ schema }) {
     let initialNodes = [];
     let initialEdges = [];
 
-    Object.keys(schema).forEach((tableName, idx) => {
+    const visibleTables = Object.keys(schema).filter(t => !t.startsWith('vector_embeddings'));
+    visibleTables.forEach((tableName, idx) => {
       // Calculate a simple grid layout avoiding overlaps
       const x = (idx % 3) * 350 + 50;
       const y = Math.floor(idx / 3) * 200 + 50;
@@ -458,7 +459,7 @@ function App() {
                   <p>Detailed view of all tables, columns, constraints and types.</p>
                 </div>
                 <div className="tables-grid">
-                  {schema && Object.keys(schema).map(tableName => (
+                  {schema && Object.keys(schema).filter(t => !t.startsWith('vector_embeddings')).map(tableName => (
                     <div key={tableName} className="desc-card">
                       <div className="desc-header">
                         <TerminalSquare size={18} color="var(--primary)" />

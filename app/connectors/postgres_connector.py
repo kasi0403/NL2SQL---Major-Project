@@ -18,6 +18,9 @@ class PostgresConnector(DatabaseConnector):
         schema = {}
 
         for table in inspector.get_table_names():
+            # Exclude internal vector-store tables from the exposed schema
+            if table.startswith("vector_embeddings"):
+                continue
             # Get Primary Key
             pk_info = inspector.get_pk_constraint(table)
             pk_cols = pk_info.get("constrained_columns", []) if pk_info else []
